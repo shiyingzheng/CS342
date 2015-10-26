@@ -1,22 +1,13 @@
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
-public class RDT20 implements Runnable {
-	private UChannel forward, backward;
-	private RSender20 sender;
-	private RReceiver20 receiver;
-	private StringPitcher sp = null;
-	
+public class RDT20 extends RTDBase {
+
 	public RDT20(double pmunge) throws IOException {this(pmunge, 0.0, null);}
 
 	public RDT20(double pmunge, double plost, String filename) throws IOException {
-		forward = new UChannel(pmunge, plost);
-		backward = new UChannel(pmunge, plost);
-		if (filename != null) sp = new StringPitcher(new File(System.getenv("user.dir"), filename), 2000, 1000);
-		sender = new RSender20(forward, backward);
-		receiver = new RReceiver20(forward, backward);
+		super(pmunge, plost, filename);
+		sender = new RSender20();
+		receiver = new RReceiver20();
 	}
 
 	public static class Packet implements PacketType{
@@ -48,41 +39,21 @@ public class RDT20 implements Runnable {
 		}
 	}
 	
-	public class RSender20 extends FSM {
-		protected UChannel forward;
-		protected UChannel backward;
+	public class RSender20 extends RSender {
 		Packet packet = null;
-		protected BufferedReader br;
-		public RSender20(UChannel forward, UChannel backward) throws IOException {
-			this.forward = forward;
-			this.backward = backward;
-			this.br = (sp != null) ? sp.getReader() : new BufferedReader(new InputStreamReader(System.in));
-		}
 		@Override
 		public int loop(int myState) throws IOException {
-			// Your code here
+		    // your code here
 			return myState;			
 		}
 	}
 
-	public class RReceiver20 extends FSM {
-		protected UChannel forward;
-		public RReceiver20(UChannel forward, UChannel backward) throws IOException {
-			this.forward = forward;
-		}
+	public class RReceiver20 extends RReceiver {
 		@Override
 		public int loop(int myState) throws IOException {
-			// Your code here
+		    // your code here
 			return myState;
 		}
-	}
-	@Override
-	public void run() {
-		new Thread(forward).start();
-		new Thread(backward).start();
-		new Thread(sender).start();
-		new Thread(receiver).start();
-		new Thread(sp).start();
 	}
 
 	public static void main(String[] args) throws IOException {

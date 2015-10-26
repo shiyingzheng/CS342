@@ -1,23 +1,15 @@
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
-public class RDT10 implements Runnable {
-	private UChannel forward;
-	private RSender10 sender;
-	private RReceiver10 receiver;
-	private StringPitcher sp = null;		
+public class RDT10 extends RTDBase {
 	
 	public RDT10(double pmunge) throws IOException {this(pmunge, 0.0, null);}
 
 	public RDT10(double pmunge, double plost, String filename) throws IOException {
-		forward = new UChannel(pmunge, plost);
-		if (filename != null) sp = new StringPitcher(new File(System.getenv("user.dir"), filename), 2000, 1000);
-		sender = new RSender10(forward);
-		receiver = new RReceiver10(forward);
+		super(pmunge, plost, filename);
+		sender = new RSender10();
+		receiver = new RReceiver10();
 	}
-
+	
 	public static class Packet implements PacketType{
 		String checksum;
 		String data;
@@ -46,58 +38,33 @@ public class RDT10 implements Runnable {
 			return String.format("%s (%s/%s)", data, checksum, CkSum.genCheck(data));
 		}
 	}
-	
-	public class RSender10 extends FSM {
-		protected UChannel forward;
-		protected BufferedReader br;
 
-		public RSender10(UChannel forward) throws IOException {
-			this.forward = forward;
-			br = (sp != null) ? sp.getReader() : new BufferedReader(new InputStreamReader(System.in));
-		}
+
+	public class RSender10 extends RSender {
 		@Override
 		public int loop(int myState) throws IOException {
 			switch(myState) {
 			case 0:
-				String dat = br.readLine();
-				if (sp != null) System.out.println(dat);
-				try {
-					Thread.sleep(750);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				Packet packet = new Packet(dat);
-				forward.send(packet.serialize());
+				String dat = getFromApp(0);
+				forward.send(new Packet(dat));
 				return 0;
 			}
 			return myState;				
 		}
 	}
 	
-	public class RReceiver10 extends FSM {
-		protected UChannel forward;
-
-		public RReceiver10(UChannel forward) throws IOException {
-			this.forward = forward;
-		}
+	public class RReceiver10 extends RReceiver {
 		@Override
 		public int loop(int myState) throws IOException {
 			switch (myState) {
 			case 0:
 				String dat = forward.receive();
 				Packet packet = Packet.deserialize(dat);
-				System.out.println("         "+packet.data);
+				deliverToApp(packet.data);
 				return 0;
 			}
 			return myState;				
 		}
-	}
-	@Override
-	public void run() {
-		new Thread(forward).start();
-		new Thread(sender).start();
-		new Thread(receiver).start();
-		if (sp != null) new Thread(sp).start();
 	}
 
 	public static void main(String[] args) throws IOException {

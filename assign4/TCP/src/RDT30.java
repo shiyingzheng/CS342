@@ -1,22 +1,13 @@
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
-public class RDT30 implements Runnable {
-	private UChannel forward, backward;
-	private TimedReceiver backwardTR;
-	private RSender30 sender;
-	private RReceiver30 receiver;
-	private StringPitcher sp = null;
-	
+public class RDT30 extends RTDBase {
+	int timeout;
 	public RDT30(double pmunge, double ploss, int timeout, String filename) throws IOException {
-		forward = new UChannel(pmunge, ploss);
-		backward = new UChannel(pmunge, ploss);
-		backwardTR = new TimedReceiver(backward);
-		if (filename != null) sp = new StringPitcher(new File(System.getenv("user.dir"), filename), 2000, 1000);		
-		sender = new RSender30(forward, backwardTR);
-		receiver = new RReceiver30(forward, backward);
+		super(pmunge, ploss, filename);
+		this.timeout = timeout;
+		backward = new TUChannel((UChannel)backward);
+		sender = new RSender30();
+		receiver = new RReceiver30();
 	}
 
 	public static class Packet implements PacketType{
@@ -55,42 +46,22 @@ public class RDT30 implements Runnable {
 		}
 	}
 	
-	public class RSender30 extends FSM {
-		protected UChannel forward;
-		protected TimedReceiver backward;
+	public class RSender30 extends RSender {
 		Packet packet = null;
-		protected BufferedReader br;
-		public RSender30(UChannel forward, TimedReceiver backward) throws IOException {
-			this.forward = forward;
-			this.backward = backward;
-			this.br = (sp != null) ? sp.getReader() : new BufferedReader(new InputStreamReader(System.in));
-		}
-		
+		TUChannel backward = (TUChannel)RDT30.this.backward;
 		@Override
 		public int loop(int myState) throws IOException {
-			// Your code here
-			return myState;
+		    // your code here
+		    return myState;
 		}
 	}
 
-	public class RReceiver30 extends FSM {
-		protected UChannel forward;
-		public RReceiver30(UChannel forward, UChannel backward) throws IOException {
-			this.forward = forward;
-		}
+	public class RReceiver30 extends RReceiver {
 		@Override
 		public int loop(int myState) throws IOException {
-//			Your code here
-			return myState;			
+		    // your code here
+		    return myState;			
 		}
-	}
-	@Override
-	public void run() {
-		new Thread(forward).start();
-		new Thread(backward).start();
-		new Thread(sender).start();
-		new Thread(receiver).start();
-		new Thread(sp).start();
 	}
 
 	public static void main(String[] args) throws IOException {
