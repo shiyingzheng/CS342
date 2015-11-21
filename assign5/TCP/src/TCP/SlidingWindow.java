@@ -33,7 +33,7 @@ public class SlidingWindow extends RTDBase {
         public Packet(String data, int seqnum, String checksum) {
             this.data = data;
             this.seqnum = seqnum;
-            this.checksum = checksum;
+            this.checksum = checksum;code to handle input from application
         }
         public static Packet deserialize(String data) {
             String hex = data.substring(0, 4);
@@ -120,19 +120,33 @@ public class SlidingWindow extends RTDBase {
         public class TimerAction implements ActionListener {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //		Your code here
+                // ok you didn't get the packet here have it again
+                
             }
         }
 
         // Input Thread
         public void loop1() throws IOException {
-            //		Your code here
+            // ok i'll send this packet
+            String line = getFromApp(0);
+            packet = new Packet(line,"0");
+            forward.send(packet);
+            nextSeqnum++;
+            //window.rebase(window.getBase()+1);
+            window.count -= 1;
+            return;
         }
 
         // Acknowledgment Thread
         @Override
         public int loop(int myState) throws IOException {
-            //		Your code here
+            // ok you got the packet thanks
+            String ackMsg = null;
+            ackMsg = backward.receive();
+            if(ackMsg.isCorrupt()) {
+                return myState;
+            }
+            window.rebase(ackMsg.seqnum+1);
             return myState;
         }
     }
