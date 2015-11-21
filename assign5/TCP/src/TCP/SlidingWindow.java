@@ -66,19 +66,42 @@ public class SlidingWindow extends RTDBase {
 
     public class Window {
 
-        //		Uncomment and Complete
-        //
+        Packet[] packets;
+        int base;
+        int nextSeqnum;
+        int nextIndex;
+        int baseIndex;
+
         public Window(int size) {
-            //			your code here
+            packets = new Packet[size];
+            base = 0;
+            nextSeqnum = 0;
+            baseIndex = 0;
+            nextIndex = 0;
         }
-        //		synchronized public void add(Packet packet) {
-        //		}
-        //		synchronized public void rebase(int newbase) {
-        //		}
-        //		synchronized public int getBase() {
-        //		}
-        //		synchronized public Packet[] getInWindow(int top) {
-        //		}
+
+        synchronized public void add(Packet packet) {
+            packets[nextSeqnum] = packet;
+            nextSeqnum = (nextSeqnum + 1) % packets.length;
+        }
+
+        synchronized public void rebase(int newBase) {
+            baseIndex = (baseIndex + (newBase - base)) % packets.length;
+            base = newBase;
+        }
+
+        synchronized public int getBase() {
+            return base;
+        }
+
+        synchronized public Packet[] getInWindow(int top) {
+            int diff = top - base;
+            Packet[] newPackets = new Packet[diff];
+            for (int i = 0; i < diff; i++) {
+                newPackets[i] = packets[(base + i) % packets.length];
+            }
+            return newPackets;
+        }
     }
 
     public class RSenderSW extends RSender {
