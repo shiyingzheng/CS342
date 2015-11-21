@@ -75,6 +75,7 @@ public class SlidingWindow extends RTDBase {
         public Window(int size) {
             packets = new Packet[size];
             base = 0;
+            nextSeqnum = 0
             baseIndex = 0;
             nextIndex = 0;
         }
@@ -82,6 +83,7 @@ public class SlidingWindow extends RTDBase {
         synchronized public void add(Packet packet) {
             packets[nextIndex] = packet;
             nextIndex = (nextIndex + 1) % packets.length;
+            nextSeqnum++;
         }
 
         synchronized public void rebase(int newBase) {
@@ -100,6 +102,10 @@ public class SlidingWindow extends RTDBase {
                 newPackets[i] = packets[(base + i) % packets.length];
             }
             return newPackets;
+        }
+
+        synchronized public boolean isFull() {
+            return (nextSeqnum - base) >= packets.length;
         }
     }
 
