@@ -66,19 +66,47 @@ public class SlidingWindow extends RTDBase {
 
     public class Window {
 
-        //		Uncomment and Complete
-        //
+        Packet[] packets;
+        int base;
+        int nextSeqnum;
+        int nextIndex;
+        int baseIndex;
+
         public Window(int size) {
-            //			your code here
+            packets = new Packet[size];
+            base = 0;
+            nextSeqnum = 0
+            baseIndex = 0;
+            nextIndex = 0;
         }
-        //		synchronized public void add(Packet packet) {
-        //		}
-        //		synchronized public void rebase(int newbase) {
-        //		}
-        //		synchronized public int getBase() {
-        //		}
-        //		synchronized public Packet[] getInWindow(int top) {
-        //		}
+
+        synchronized public void add(Packet packet) {
+            packets[nextIndex] = packet;
+            nextIndex = (nextIndex + 1) % packets.length;
+            nextSeqnum++;
+        }
+
+        synchronized public void rebase(int newBase) {
+            baseIndex = (baseIndex + (newBase - base)) % packets.length;
+            base = newBase;
+        }
+
+        synchronized public int getBase() {
+            return base;
+        }
+
+        synchronized public Packet[] getInWindow(int top) {
+            int diff = top - base;
+            Packet[] newPackets = new Packet[diff];
+            for (int i = 0; i < diff; i++) {
+                newPackets[i] = packets[(base + i) % packets.length];
+            }
+            return newPackets;
+        }
+
+        synchronized public boolean isFull() {
+            return (nextSeqnum - base) >= packets.length;
+        }
     }
 
     public class RSenderSW extends RSender {
@@ -152,10 +180,35 @@ public class SlidingWindow extends RTDBase {
     }
 
     public class RReceiverSW extends RReceiver {
-        //      Your code here
+        int expectedSeqnum;
         @Override
         public int loop(int myState) throws IOException {
-            //		Your code here
+            String dat = forward.receive();
+            Packet packet = Packet.deserialize(dat);
+            System.out.printf("         **Receiver: %s ***\n", packet.toString());
+            if (packet.isCorrupt()){
+                System.out.printf("         **Receiver: corrupt data; replying ACK %04d **\n", expectedSeqnum-1);
+                Packet p = new Packet("ACK", expectedSeqnum - 1);
+                backward.send(p);
+                return myState;
+            }
+            if (packet.seqnum < expectedSeqnum) {
+                System.out.printf("         **Receiver: Duplicate %d packet; discarding; replying ACK %04d **\n", packet.seqnum, expectedSeqnum - 1);
+                Packet p = new Packet("ACK", expectedSeqnum - 1);
+                backward.send(p);
+                return myState;
+            }
+            if (packet.seqnum > expectedSeqnum) {
+                System.out.printf("         **Receiver: %d packet received out of sequence; discarding; replying ACK %04d **\n", packet.seqnum, expectedSeqnum - 1);
+                Packet p = new Packet("ACK", expectedSeqnum - 1);
+                backward.send(p);
+                return myState;
+            }
+            System.out.printf("         **Receiver: ok %d data; replying ACK %04d **\n", packet.seqnum, packet.seqnum);
+            deliverToApp(packet.data);
+            p = new Packet("ACK", packet.seqnum);
+            backward.send(p);
+            expectedSeqnum = packet.seqnum + 1;
             return myState;
         }
     }
