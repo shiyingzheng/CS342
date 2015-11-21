@@ -160,10 +160,35 @@ public class SlidingWindow extends RTDBase {
     }
 
     public class RReceiverSW extends RReceiver {
-        //      Your code here
+        int expectedSeqnum;
         @Override
         public int loop(int myState) throws IOException {
-            //		Your code here
+            String dat = forward.receive();
+            Packet packet = Packet.deserialize(dat);
+            System.out.printf("         **Receiver: %s ***\n", packet.toString());
+            if (packet.isCorrupt()){
+                System.out.printf("         **Receiver: corrupt data; replying ACK %04d **\n", expectedSeqnum-1);
+                Packet p = new Packet("ACK", expectedSeqnum - 1);
+                backward.send(p);
+                return myState;
+            }
+            if (packet.seqnum < expectedSeqnum) {
+                System.out.printf("         **Receiver: Duplicate %d packet; discarding; replying ACK %04d **\n", packet.seqnum, expectedSeqnum - 1);
+                Packet p = new Packet("ACK", expectedSeqnum - 1);
+                backward.send(p);
+                return myState;
+            }
+            if (packet.seqnum > expectedSeqnum) {
+                System.out.printf("         **Receiver: %d packet received out of sequence; discarding; replying ACK %04d **\n", packet.seqnum, expectedSeqnum - 1);
+                Packet p = new Packet("ACK", expectedSeqnum - 1);
+                backward.send(p);
+                return myState;
+            }
+            System.out.printf("         **Receiver: ok %d data; replying ACK %04d **\n", packet.seqnum, packet.seqnum);
+            deliverToApp(packet.data);
+            p = new Packet("ACK", packet.seqnum);
+            backward.send(p);
+            expectedSeqnum = packet.seqnum + 1;
             return myState;
         }
     }
