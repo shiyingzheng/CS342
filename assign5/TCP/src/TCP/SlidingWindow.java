@@ -98,8 +98,8 @@ public class SlidingWindow extends RTDBase {
             return base;
         }
 
-        synchronized public Packet[] getInWindow(int top) {
-            int diff = top - base;
+        synchronized public Packet[] getPackets() {
+            int diff = nextSeqnum - base;
             Packet[] newPackets = new Packet[diff];
             for (int i = 0; i < diff; i++) {
                 newPackets[i] = packets[(base + i) % packets.length];
@@ -115,7 +115,7 @@ public class SlidingWindow extends RTDBase {
     public class RSenderSW extends RSender {
         Packet packet = null;
         Window window = new Window(N);
-        int nextSeqnum = 1;
+        int nextSeqnum = 0;
         Vector<String> hold = new Vector<String>();
         Timer timer = new Timer(timeout, new TimerAction());
 
@@ -155,7 +155,7 @@ public class SlidingWindow extends RTDBase {
                 // set nextSeqnum to unreceived packet
                 timer = new Timer(timeout, new TimerAction()); 
                 timer.start();
-                Packet[] packs = window.getInWindow(nextSeqnum-1);
+                Packet[] packs = window.getPackets();
                 for(int i=0; i<packs.length; i++) {
                     forward.send(packs[i]);
                 }
@@ -200,7 +200,7 @@ public class SlidingWindow extends RTDBase {
     }
 
     public class RReceiverSW extends RReceiver {
-        int expectedSeqnum;
+        int expectedSeqnum = 0;
         @Override
         public int loop(int myState) throws IOException {
             String dat = forward.receive();
