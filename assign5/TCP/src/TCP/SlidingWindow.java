@@ -87,6 +87,9 @@ public class SlidingWindow extends RTDBase {
         }
 
         synchronized public void rebase(int newBase) {
+            if (newBase <= base) { // trying to rebase to a smaller seqnum
+                return;
+            }
             baseIndex = (baseIndex + (newBase - base)) % packets.length;
             base = newBase;
         }
