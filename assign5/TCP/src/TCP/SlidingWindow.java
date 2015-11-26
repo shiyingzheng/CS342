@@ -136,7 +136,7 @@ public class SlidingWindow extends RTDBase {
             return new Thread(new Runnable(){
                 public void run() {
                     try {
-                        for (;;) loop1();
+                        for (;;) getAndSendInput();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -148,21 +148,36 @@ public class SlidingWindow extends RTDBase {
         public class TimerAction implements ActionListener {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // ok you didn't get the packet here have it again
-                
+                // ok you didn't get the packet, set window base to this packet
+                // set nextSeqnum to unreceived packet
+                timer = new Timer(timeout, new TimerAction()); 
+                timer.start();
+                Packet[] packs = window.getInWindow(nextSeqnum-1);
+                for(int i; i<packs.length; i++) {
+                    forward.send(packs[i]);
+                }
             }
         }
 
         // Input Thread
-        public void loop1() throws IOException {
+        public void getAndSendInput() throws IOException {
             // ok i'll send this packet
-            String line = getFromApp(0);
-            packet = new Packet(line,"0");
+
+            //get element
+            //isFull
+            //put in window
+            //send element
+            if(!window.isFull()) {
+                String line = getFromApp(0);
+                packet = new Packet(line,nextSeqnum);
+                window.add(packet);
+            }
+            if(nextSeqnum==window.getBase()) {
+                timer = new Timer(timeout, new TimerAction());
+                timer.start();
+            }
             forward.send(packet);
             nextSeqnum++;
-            //window.rebase(window.getBase()+1);
-            window.count -= 1;
-            return;
         }
 
         // Acknowledgment Thread
@@ -174,6 +189,7 @@ public class SlidingWindow extends RTDBase {
             if(ackMsg.isCorrupt()) {
                 return myState;
             }
+            
             window.rebase(ackMsg.seqnum+1);
             return myState;
         }
