@@ -8,8 +8,7 @@ import javax.swing.Timer;
 
 public class SlidingWindow extends RTDBase {
     public final static int MAXSEQ = 10000, N = 5;
-    private int timeout;
-    public SlidingWindow(double pmunge, double ploss, int timeout, String filename) throws IOException {
+    private int timeout; public SlidingWindow(double pmunge, double ploss, int timeout, String filename) throws IOException {
         super(pmunge, ploss, filename, 1000);
         this.timeout = timeout;
         sender = new RSenderSW();
@@ -153,7 +152,9 @@ public class SlidingWindow extends RTDBase {
             public void actionPerformed(ActionEvent e) {
                 // ok you didn't get the packet, set window base to this packet
                 // set nextSeqnum to unreceived packet
-                timer = new Timer(timeout, new TimerAction()); 
+                
+                System.out.println("  **Sender: timeout; resending from " + window.getBase() + "***");
+                timer = new Timer(timeout, new TimerAction());
                 timer.start();
                 Packet[] packs = window.getPackets();
                 for(int i=0; i<packs.length; i++) {
@@ -179,6 +180,7 @@ public class SlidingWindow extends RTDBase {
                 timer = new Timer(timeout, new TimerAction());
                 timer.start();
             }
+            System.out.println("Sender: sending: " + packet.toString());
             forward.send(packet);
             nextSeqnum++;
         }
@@ -190,10 +192,12 @@ public class SlidingWindow extends RTDBase {
             String msg = null;
             msg = backward.receive();
             Packet ackMsg = Packet.deserialize(msg);
+            System.out.println("  **Sender: " + ackMsg.toString() + " ***");
             if(ackMsg.isCorrupt()) {
                 return myState;
             }
             
+            System.out.println("  **Sender: noncorrupt ack; base = " + ackMsg.seqnum + 1 + " ***");
             window.rebase(ackMsg.seqnum+1);
             return myState;
         }
