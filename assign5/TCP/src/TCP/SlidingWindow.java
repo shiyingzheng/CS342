@@ -86,6 +86,7 @@ public class SlidingWindow extends RTDBase {
         }
 
         synchronized public void rebase(int newBase) {
+            newBase--;
             if (newBase <= base) { // trying to rebase to a smaller seqnum
                 return;
             }
@@ -154,7 +155,7 @@ public class SlidingWindow extends RTDBase {
                 // set nextSeqnum to unreceived packet
 
                 System.out.println("  **Sender: timeout; resending from " + window.getBase() + "***");
-                timer = new Timer(timeout, new TimerAction());
+                //timer = new Timer(timeout, new TimerAction());
                 timer.start();
                 Packet[] packs = window.getPackets();
                 for(int i=0; i<packs.length; i++) {
@@ -175,14 +176,14 @@ public class SlidingWindow extends RTDBase {
                 String line = getFromApp(0);
                 packet = new Packet(line,nextSeqnum);
                 window.add(packet);
+                if(nextSeqnum==window.getBase()) {
+                    //timer = new Timer(timeout, new TimerAction());
+                    timer.start();
+                }
+                System.out.println("Sender: sending: " + packet.toString());
+                forward.send(packet);
+                nextSeqnum++;
             }
-            if(nextSeqnum==window.getBase()) {
-                timer = new Timer(timeout, new TimerAction());
-                timer.start();
-            }
-            System.out.println("Sender: sending: " + packet.toString());
-            forward.send(packet);
-            nextSeqnum++;
         }
 
         // Acknowledgment Thread
@@ -197,7 +198,7 @@ public class SlidingWindow extends RTDBase {
                 return myState;
             }
 
-            System.out.println("  **Sender: noncorrupt ack; base = " + ackMsg.seqnum + 1 + " ***");
+            System.out.println("  **Sender: noncorrupt ack; base = " + (ackMsg.seqnum + 1) + " ***");
             window.rebase(ackMsg.seqnum+1);
             return myState;
         }
