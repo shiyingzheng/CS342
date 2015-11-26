@@ -94,7 +94,7 @@ public class SlidingWindow extends RTDBase {
         }
 
         synchronized public int getBase() {
-            return base;
+            return base + 1;
         }
 
         synchronized public Packet[] getPackets() {
@@ -114,7 +114,7 @@ public class SlidingWindow extends RTDBase {
     public class RSenderSW extends RSender {
         Packet packet = null;
         Window window = new Window(N);
-        int nextSeqnum = 0;
+        int nextSeqnum = 1;
         Vector<String> hold = new Vector<String>();
         Timer timer = new Timer(timeout, new TimerAction());
 
@@ -152,7 +152,7 @@ public class SlidingWindow extends RTDBase {
             public void actionPerformed(ActionEvent e) {
                 // ok you didn't get the packet, set window base to this packet
                 // set nextSeqnum to unreceived packet
-                
+
                 System.out.println("  **Sender: timeout; resending from " + window.getBase() + "***");
                 timer = new Timer(timeout, new TimerAction());
                 timer.start();
@@ -196,7 +196,7 @@ public class SlidingWindow extends RTDBase {
             if(ackMsg.isCorrupt()) {
                 return myState;
             }
-            
+
             System.out.println("  **Sender: noncorrupt ack; base = " + ackMsg.seqnum + 1 + " ***");
             window.rebase(ackMsg.seqnum+1);
             return myState;
@@ -204,7 +204,7 @@ public class SlidingWindow extends RTDBase {
     }
 
     public class RReceiverSW extends RReceiver {
-        int expectedSeqnum = 0;
+        int expectedSeqnum = 1;
         @Override
         public int loop(int myState) throws IOException {
             String dat = forward.receive();
