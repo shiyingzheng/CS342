@@ -33,7 +33,7 @@ public class SlidingWindow extends RTDBase {
         public Packet(String data, int seqnum, String checksum) {
             this.data = data;
             this.seqnum = seqnum;
-            this.checksum = checksum;code to handle input from application
+            this.checksum = checksum; //code to handle input from application
         }
         public static Packet deserialize(String data) {
             String hex = data.substring(0, 4);
@@ -75,7 +75,7 @@ public class SlidingWindow extends RTDBase {
         public Window(int size) {
             packets = new Packet[size];
             base = 0;
-            nextSeqnum = 0
+            nextSeqnum = 0;
             baseIndex = 0;
             nextIndex = 0;
         }
@@ -156,7 +156,7 @@ public class SlidingWindow extends RTDBase {
                 timer = new Timer(timeout, new TimerAction()); 
                 timer.start();
                 Packet[] packs = window.getInWindow(nextSeqnum-1);
-                for(int i; i<packs.length; i++) {
+                for(int i=0; i<packs.length; i++) {
                     forward.send(packs[i]);
                 }
             }
@@ -187,8 +187,9 @@ public class SlidingWindow extends RTDBase {
         @Override
         public int loop(int myState) throws IOException {
             // ok you got the packet thanks
-            String ackMsg = null;
-            ackMsg = backward.receive();
+            String msg = null;
+            msg = backward.receive();
+            Packet ackMsg = Packet.deserialize(msg);
             if(ackMsg.isCorrupt()) {
                 return myState;
             }
@@ -225,7 +226,7 @@ public class SlidingWindow extends RTDBase {
             }
             System.out.printf("         **Receiver: ok %d data; replying ACK %04d **\n", packet.seqnum, packet.seqnum);
             deliverToApp(packet.data);
-            p = new Packet("ACK", packet.seqnum);
+            Packet p = new Packet("ACK", packet.seqnum);
             backward.send(p);
             expectedSeqnum = packet.seqnum + 1;
             return myState;
